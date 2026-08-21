@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
-from app.modules.playground.schemas import ItemCreate, ItemRead
+from app.modules.playground.schemas import ItemCreate, ItemPatch, ItemRead
 
 playground_router = APIRouter(prefix="/playground", tags=["playground"])
 
@@ -63,3 +63,25 @@ def delete_item(item_id: int, api_key: str = Depends(verify_demo_api_key)) -> No
     if item_id not in _fake_items_db:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
     del _fake_items_db[item_id]
+
+
+
+@playground_router.patch("/items/{item_id}", response_model=ItemRead)
+def update_item(item_id: int, payload: ItemPatch) -> ItemRead:
+    item = _fake_items_db.get(item_id)
+
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Item {item_id} not found",
+        )
+
+    updates = payload.model_dump(exclude_unset=True)
+
+    if "name" in updates:
+        item.name = updates["name"]
+
+    if "price_cents" in updates:
+        item.price_cents = updates["price_cents"]
+
+    return item
