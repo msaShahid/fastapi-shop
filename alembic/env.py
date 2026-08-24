@@ -1,6 +1,7 @@
 import asyncio
 from logging.config import fileConfig
 
+from app.modules.auth.models.refresh_token import RefreshToken  # noqa: F401
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
