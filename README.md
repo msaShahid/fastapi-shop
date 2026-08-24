@@ -32,3 +32,12 @@ To also wipe the database volume:
 ```bash
 docker compose down -v
 ```
+
+
+### Recreate API Container
+
+If you update `.env` or change API environment variables, recreate the API container so the changes are loaded:
+
+```bash
+docker compose up -d --force-recreate api
+```
