@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     # --- Database ---
     database_url: str
 
+    # --- JWT / Auth --- python -c "import secrets; print(secrets.token_hex(32))"
+
+    jwt_secret: str
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 7
+
     # --- CORS (kept minimal for now, revisited later) ---
     cors_origins: list[str] = ["http://localhost:3000"]
 
