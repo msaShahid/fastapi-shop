@@ -6,8 +6,11 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      PYTHONPATH: /code
     volumes:
       - ./app:/code/app
+      - ./tests:/code/tests
       - ./alembic:/code/alembic
       - ./alembic.ini:/code/alembic.ini
     depends_on:
