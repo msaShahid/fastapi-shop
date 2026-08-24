@@ -7,7 +7,9 @@ services:
     env_file:
       - .env
     volumes:
-      - ./app:/code/app   # mount source for live-reload during development
+      - ./app:/code/app
+      - ./alembic:/code/alembic
+      - ./alembic.ini:/code/alembic.ini
     depends_on:
       db:
         condition: service_healthy
@@ -17,18 +19,28 @@ services:
     image: postgres:16-alpine
     container_name: fastapi_shop_db
     environment:
-      POSTGRES_USER: shop_user
-      POSTGRES_PASSWORD: shop_password
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: "Passw0rd11!!"
       POSTGRES_DB: shop_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U shop_user -d shop_db"]
+      test: ["CMD-SHELL", "pg_isready -U root -d shop_db"]
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  adminer:
+    image: adminer
+    container_name: fastapi_shop_adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
