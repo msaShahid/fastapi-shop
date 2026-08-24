@@ -20,7 +20,7 @@ services:
     container_name: fastapi_shop_db
     environment:
       POSTGRES_USER: root
-      POSTGRES_PASSWORD: "Passw0rd11!!"
+      POSTGRES_PASSWORD: "Passw0rd11"
       POSTGRES_DB: shop_db
     ports:
       - "5432:5432"

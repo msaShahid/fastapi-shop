@@ -20,9 +20,14 @@ class User(Base, TimestampMixin):
     password_hash: Mapped[str] = mapped_column(String(255))
 
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="user_role"),
+        Enum(
+            UserRole,
+            name="user_role",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
         default=UserRole.USER,
-        server_default=UserRole.USER.value,
+        server_default="user",
+        nullable=False,
     )
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
