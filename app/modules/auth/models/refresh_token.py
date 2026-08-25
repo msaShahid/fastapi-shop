@@ -9,8 +9,6 @@ from app.shared.mixins import TimestampMixin
 
 
 class RefreshToken(Base, TimestampMixin):
- 
-
     __tablename__ = "refresh_tokens"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)

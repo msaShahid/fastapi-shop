@@ -9,7 +9,6 @@ from app.shared.mixins import TimestampMixin
 
 
 class User(Base, TimestampMixin):
-
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
