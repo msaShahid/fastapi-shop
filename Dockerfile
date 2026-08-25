@@ -2,23 +2,27 @@ FROM python:3.12-slim
 
 WORKDIR /code
 
-# System deps needed to build some Python packages
-# (e.g. asyncpg, argon2)
+# System dependencies needed to build some Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install project dependencies first so Docker can cache
-# this layer when only application code changes.
+# Install uv
+RUN pip install --no-cache-dir uv
+
+# Copy dependency metadata
 COPY pyproject.toml ./
 
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir . \
-    && pip install --no-cache-dir pytest
-
-# Copy application source
+# Copy application and tests
 COPY ./app ./app
 COPY ./tests ./tests
+
+# Install application and development dependencies
+RUN uv pip install --system --no-cache . \
+    pytest \
+    pytest-asyncio \
+    httpx \
+    ruff
 
 EXPOSE 8000
 

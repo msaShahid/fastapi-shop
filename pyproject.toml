@@ -13,6 +13,7 @@ dependencies = [
     "python-jose[cryptography]>=3.3",
     "passlib[argon2]>=1.7",
     "python-multipart>=0.0.9",
+    "email-validator>=2.2",
 ]
 
 [tool.uv]
@@ -23,12 +24,25 @@ dev-dependencies = [
     "ruff>=0.6",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Header",
+    "fastapi.Cookie",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
