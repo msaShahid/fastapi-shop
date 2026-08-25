@@ -1,6 +1,12 @@
 from collections.abc import AsyncGenerator
+from typing import Annotated
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import get_settings
@@ -25,7 +31,6 @@ class Base(DeclarativeBase):
     pass
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-
     async with async_session_factory() as session:
         try:
             yield session
@@ -35,3 +40,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
+
+
+DbSession = Annotated[
+    AsyncSession,
+    Depends(get_db),
+]
