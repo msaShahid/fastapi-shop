@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
-from app.modules.auth.dependencies.auth import AuthServiceDep
+from app.modules.auth.dependencies.auth import AuthServiceDep, CurrentUser
 from app.modules.auth.exceptions.auth_exceptions import (
     EmailAlreadyExistsError,
     InvalidCredentialsError,
@@ -43,3 +43,9 @@ async def login(payload: LoginRequest, service: AuthServiceDep) -> TokenPair:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         ) from exc
+
+
+@auth_router.get("/me", response_model=UserRead)
+async def get_me(current_user: CurrentUser) -> UserRead:
+
+    return UserRead.model_validate(current_user)
