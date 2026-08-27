@@ -1,7 +1,6 @@
 import asyncio
 from logging.config import fileConfig
 
-from app.modules.auth.models.refresh_token import RefreshToken  # noqa: F401
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -9,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.core.config import get_settings
 from app.core.database import Base
+from app.modules.auth.models.refresh_token import RefreshToken  # noqa: F401
 
 # Import every model module here so Base.metadata knows about its table.
 # A model that's never imported never registers itself with Base --
