@@ -4,6 +4,7 @@ from app.core.security import decode_token
 from app.modules.auth.exceptions.auth_exceptions import (
     EmailAlreadyExistsError,
     InvalidCredentialsError,
+    InvalidRefreshTokenError,
     UsernameAlreadyExistsError,
 )
 from app.modules.auth.services.auth_service import AuthService
@@ -69,5 +70,62 @@ async def test_login_rejects_wrong_password(auth_service):
 
 
 async def test_login_rejects_nonexistent_email_with_same_error_as_wrong_password(auth_service):
+
     with pytest.raises(InvalidCredentialsError):
         await auth_service.login(email="nobody@example.com", password="whatever123")
+
+
+async def test_refresh_issues_new_valid_access_token(auth_service):
+    await auth_service.register(username="shahid", email="shahid@example.com", password="pass1234")
+    tokens = await auth_service.login(email="shahid@example.com", password="pass1234")
+
+    new_tokens = await auth_service.refresh(refresh_token=tokens.refresh_token)
+
+    payload = decode_token(new_tokens.access_token)
+    assert payload["type"] == "access"
+
+
+async def test_refresh_rotates_the_refresh_token(auth_service):
+
+    await auth_service.register(username="shahid", email="shahid@example.com", password="pass1234")
+    tokens = await auth_service.login(email="shahid@example.com", password="pass1234")
+
+    new_tokens = await auth_service.refresh(refresh_token=tokens.refresh_token)
+
+    assert new_tokens.refresh_token != tokens.refresh_token
+
+
+async def test_reusing_a_rotated_refresh_token_is_rejected(auth_service):
+
+    await auth_service.register(username="shahid", email="shahid@example.com", password="pass1234")
+    tokens = await auth_service.login(email="shahid@example.com", password="pass1234")
+
+    await auth_service.refresh(refresh_token=tokens.refresh_token)
+
+    with pytest.raises(InvalidRefreshTokenError):
+        await auth_service.refresh(refresh_token=tokens.refresh_token)
+
+
+async def test_refresh_rejects_an_access_token(auth_service):
+    """An access token presented where a refresh token belongs must be rejected."""
+    await auth_service.register(username="shahid", email="shahid@example.com", password="pass1234")
+    tokens = await auth_service.login(email="shahid@example.com", password="pass1234")
+
+    with pytest.raises(InvalidRefreshTokenError):
+        await auth_service.refresh(refresh_token=tokens.access_token)
+
+
+async def test_logout_revokes_the_refresh_token(auth_service):
+    await auth_service.register(username="shahid", email="shahid@example.com", password="pass1234")
+    tokens = await auth_service.login(email="shahid@example.com", password="pass1234")
+
+    await auth_service.logout(refresh_token=tokens.refresh_token)
+
+    # A revoked token can no longer be used to refresh.
+    with pytest.raises(InvalidRefreshTokenError):
+        await auth_service.refresh(refresh_token=tokens.refresh_token)
+
+
+async def test_logout_with_garbage_token_does_not_raise(auth_service):
+
+    await auth_service.logout(refresh_token="not-a-real-token")

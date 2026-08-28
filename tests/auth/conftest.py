@@ -1,9 +1,25 @@
 import uuid
+from dataclasses import dataclass
+from datetime import datetime
 
 import pytest
 
 from app.modules.auth.models.user import User
 from app.shared.enums.roles import UserRole
+
+
+@dataclass
+class FakeRefreshToken:
+    """
+    Mirrors the real RefreshToken model's shape closely enough for
+    AuthService's logic to operate on identically -- it reads
+    .revoked, .expires_at, .user_id, exactly like the real ORM object.
+    """
+
+    jti: str
+    user_id: uuid.UUID
+    expires_at: datetime
+    revoked: bool = False
 
 
 class FakeAuthRepository:
@@ -19,7 +35,7 @@ class FakeAuthRepository:
         self.users_by_id: dict[uuid.UUID, User] = {}
         self.users_by_email: dict[str, User] = {}
         self.users_by_username: dict[str, User] = {}
-        self.refresh_tokens: dict[str, dict] = {}
+        self.refresh_tokens: dict[str, FakeRefreshToken] = {}
 
     async def get_user_by_id(self, user_id: uuid.UUID) -> User | None:
         return self.users_by_id.get(user_id)
@@ -44,19 +60,18 @@ class FakeAuthRepository:
         self.users_by_username[username] = user
         return user
 
-    async def store_refresh_token(self, *, user_id: uuid.UUID, jti: str, expires_at) -> None:
-        self.refresh_tokens[jti] = {
-            "user_id": user_id,
-            "expires_at": expires_at,
-            "revoked": False,
-        }
+    async def store_refresh_token(
+        self, *, user_id: uuid.UUID, jti: str, expires_at: datetime
+    ) -> FakeRefreshToken:
+        token = FakeRefreshToken(jti=jti, user_id=user_id, expires_at=expires_at)
+        self.refresh_tokens[jti] = token
+        return token
 
-    async def get_refresh_token_by_jti(self, jti: str) -> dict | None:
+    async def get_refresh_token_by_jti(self, jti: str) -> FakeRefreshToken | None:
         return self.refresh_tokens.get(jti)
 
-    async def revoke_refresh_token(self, jti: str) -> None:
-        if jti in self.refresh_tokens:
-            self.refresh_tokens[jti]["revoked"] = True
+    async def revoke_refresh_token(self, token: FakeRefreshToken) -> None:
+        token.revoked = True
 
 
 @pytest.fixture
