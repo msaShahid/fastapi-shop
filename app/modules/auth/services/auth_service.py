@@ -1,16 +1,19 @@
 from datetime import UTC, datetime
 
-from jose import jwt
+from jose import JWTError, jwt
 
 from app.core.security import (
+    TokenType,
     create_access_token,
     create_refresh_token,
+    decode_token,
     hash_password,
     verify_password,
 )
 from app.modules.auth.exceptions.auth_exceptions import (
     EmailAlreadyExistsError,
     InvalidCredentialsError,
+    InvalidRefreshTokenError,
     UsernameAlreadyExistsError,
 )
 from app.modules.auth.models.user import User
@@ -56,3 +59,50 @@ class AuthService:
         )
 
         return TokenPair(access_token=access_token, refresh_token=refresh_token)
+
+    async def refresh(self, *, refresh_token: str) -> TokenPair:
+
+        try:
+            payload = decode_token(refresh_token)
+        except JWTError as exc:
+            raise InvalidRefreshTokenError() from exc
+
+        if payload.get("type") != TokenType.REFRESH.value:
+            raise InvalidRefreshTokenError()
+
+        jti = payload.get("jti")
+        stored = await self.repository.get_refresh_token_by_jti(jti)
+
+        if stored is None or stored.revoked or stored.expires_at < datetime.now(UTC):
+            raise InvalidRefreshTokenError()
+
+        # Rotation: revoke the one just used BEFORE issuing a new one.
+        await self.repository.revoke_refresh_token(stored)
+
+        subject = payload["sub"]
+        new_access_token = create_access_token(subject=subject)
+        new_refresh_token = create_refresh_token(subject=subject)
+
+        new_payload = jwt.get_unverified_claims(new_refresh_token)
+        await self.repository.store_refresh_token(
+            user_id=stored.user_id,
+            jti=new_payload["jti"],
+            expires_at=datetime.fromtimestamp(new_payload["exp"], tz=UTC),
+        )
+
+        return TokenPair(access_token=new_access_token, refresh_token=new_refresh_token)
+
+    async def logout(self, *, refresh_token: str) -> None:
+    
+        try:
+            payload = decode_token(refresh_token)
+        except JWTError:
+            return
+
+        jti = payload.get("jti")
+        if jti is None:
+            return
+
+        stored = await self.repository.get_refresh_token_by_jti(jti)
+        if stored is not None and not stored.revoked:
+            await self.repository.revoke_refresh_token(stored)
