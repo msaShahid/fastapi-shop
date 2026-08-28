@@ -4,9 +4,16 @@ from app.modules.auth.dependencies.auth import AuthServiceDep, CurrentUser
 from app.modules.auth.exceptions.auth_exceptions import (
     EmailAlreadyExistsError,
     InvalidCredentialsError,
+    InvalidRefreshTokenError,
     UsernameAlreadyExistsError,
 )
-from app.modules.auth.schemas.auth import LoginRequest, RegisterRequest, TokenPair, UserRead
+from app.modules.auth.schemas.auth import (
+    LoginRequest,
+    RefreshRequest,
+    RegisterRequest,
+    TokenPair,
+    UserRead,
+)
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -49,3 +56,20 @@ async def login(payload: LoginRequest, service: AuthServiceDep) -> TokenPair:
 async def get_me(current_user: CurrentUser) -> UserRead:
 
     return UserRead.model_validate(current_user)
+
+@auth_router.post("/refresh", response_model=TokenPair)
+async def refresh(payload: RefreshRequest, service: AuthServiceDep) -> TokenPair:
+
+    try:
+        return await service.refresh(refresh_token=payload.refresh_token)
+    except InvalidRefreshTokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        ) from exc
+
+
+@auth_router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(payload: RefreshRequest, service: AuthServiceDep) -> None:
+
+    await service.logout(refresh_token=payload.refresh_token)
