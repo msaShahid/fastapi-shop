@@ -24,6 +24,7 @@ app.include_router(playground_router, prefix=settings.api_v1_prefix)
 app.include_router(auth_router, prefix=settings.api_v1_prefix)
 app.include_router(users_router, prefix=settings.api_v1_prefix)
 app.include_router(category_router, prefix=settings.api_v1_prefix)
+app.include_router(product_router, prefix=settings.api_v1_prefix)
 
 
 
