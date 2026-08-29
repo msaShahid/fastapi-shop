@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.modules.auth.api.router import auth_router
+from app.modules.categories.api.router import category_router
 from app.modules.playground.api.router import playground_router
+from app.modules.products.api.router import product_router
 from app.modules.users.api.router import users_router
 
 settings = get_settings()
@@ -21,6 +23,8 @@ app = FastAPI(
 app.include_router(playground_router, prefix=settings.api_v1_prefix)
 app.include_router(auth_router, prefix=settings.api_v1_prefix)
 app.include_router(users_router, prefix=settings.api_v1_prefix)
+app.include_router(category_router, prefix=settings.api_v1_prefix)
+
 
 
 @app.get("/health", tags=["health"])
