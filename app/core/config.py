@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     # --- CORS (kept minimal for now, revisited later) ---
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # --- Dev seeding (see scripts/seed.py) ---
+    seed_admin_email: str = "admin@example.com"
+    seed_admin_password: str = "AdminPassword123!"
+    seed_user_email: str = "user@example.com"
+    seed_user_password: str = "UserPassword123!"
+
 
 @lru_cache
 def get_settings() -> Settings:
