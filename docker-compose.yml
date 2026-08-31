@@ -13,6 +13,7 @@ services:
       - ./tests:/code/tests
       - ./alembic:/code/alembic
       - ./alembic.ini:/code/alembic.ini
+      - ./scripts:/code/scripts
     depends_on:
       db:
         condition: service_healthy
