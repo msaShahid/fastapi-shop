@@ -22,7 +22,11 @@ class Product(Base, TimestampMixin):
     stock: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     status: Mapped[ProductStatus] = mapped_column(
-        Enum(ProductStatus, name="product_status"),
+        Enum(
+            ProductStatus,
+            name="product_status",
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+        ),
         default=ProductStatus.DRAFT,
         server_default=ProductStatus.DRAFT.value,
     )
