@@ -1,17 +1,21 @@
 """create categories table
 
-Revision ID: 776253604842
-Revises: 3ad7418eab15
-Create Date: 2026-08-28 12:31:55.115579
+Revision ID: 7ab3f58edf2f
+Revises: 1970796204f7
+Create Date: 2026-08-31 12:01:48.144456
 
 """
-from collections.abc import Sequence
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
+
 
 # revision identifiers, used by Alembic.
-revision: str = '776253604842'
-down_revision: str | Sequence[str] | None = '3ad7418eab15'
-branch_labels: str | Sequence[str] | None = None
-depends_on: str | Sequence[str] | None = None
+revision: str = '7ab3f58edf2f'
+down_revision: Union[str, Sequence[str], None] = '1970796204f7'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
