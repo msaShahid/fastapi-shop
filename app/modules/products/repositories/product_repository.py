@@ -1,5 +1,6 @@
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.modules.products.models.product import Product
 
@@ -9,7 +10,12 @@ class ProductRepository:
         self.db = db
 
     async def get_by_id(self, product_id: int) -> Product | None:
-        return await self.db.get(Product, product_id)
+        result = await self.db.execute(
+            select(Product)
+            .where(Product.id == product_id)
+            .options(selectinload(Product.category))
+        )
+        return result.scalar_one_or_none()
 
     async def get_by_sku(self, sku: str) -> Product | None:
         result = await self.db.execute(select(Product).where(Product.sku == sku))
@@ -25,7 +31,11 @@ class ProductRepository:
         total = total_result.scalar_one()
 
         items_result = await self.db.execute(
-            select(Product).order_by(Product.created_at.desc()).offset(offset).limit(limit)
+            select(Product)
+            .options(selectinload(Product.category))
+            .order_by(Product.created_at.desc())
+            .offset(offset)
+            .limit(limit)
         )
         items = list(items_result.scalars().all())
 
