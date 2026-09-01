@@ -1,10 +1,14 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import CheckConstraint, Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.shared.enums.product_status import ProductStatus
 from app.shared.mixins import TimestampMixin
 
+if TYPE_CHECKING:
+    from app.modules.categories.models.category import Category
 
 class Product(Base, TimestampMixin):
 
@@ -35,6 +39,8 @@ class Product(Base, TimestampMixin):
         ForeignKey("categories.id", ondelete="RESTRICT"),
         index=True,
     )
+    # category is the parent of the product
+    category: Mapped["Category"] = relationship(back_populates="products")
 
     __table_args__ = (
         CheckConstraint("price_cents > 0", name="ck_products_price_positive"),
