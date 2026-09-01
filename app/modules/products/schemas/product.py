@@ -5,6 +5,13 @@ from pydantic import BaseModel, Field
 from app.shared.enums.product_status import ProductStatus
 
 
+class CategorySummary(BaseModel):
+    id: int
+    name: str
+    slug: str
+
+    model_config = {"from_attributes": True}
+    
 class ProductCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=5000)
@@ -33,7 +40,8 @@ class ProductRead(BaseModel):
     sku: str
     stock: int
     status: ProductStatus
-    category_id: int
+    #category_id: int
+    category: CategorySummary
     created_at: datetime
     updated_at: datetime
 
