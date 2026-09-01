@@ -1,8 +1,13 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Boolean, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.shared.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.modules.products.models.product import Product
 
 
 class Category(Base, TimestampMixin):
@@ -16,3 +21,6 @@ class Category(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text, default=None)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+
+    # products is the child of the category
+    products: Mapped[list["Product"]] = relationship(back_populates="category")
