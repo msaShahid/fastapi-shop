@@ -12,7 +12,7 @@ from app.modules.products.schemas.product import (
     ProductRead,
     ProductUpdate,
 )
-from app.shared.pagination.schemas import PageParams, PaginatedResponse
+from app.shared.pagination.schemas import PaginatedResponse, ProductQueryParams
 
 product_router = APIRouter(prefix="/products", tags=["products"])
 
@@ -63,12 +63,32 @@ async def create_product(
     return ProductRead.model_validate(product)
 
 
+# @product_router.get("", response_model=PaginatedResponse[ProductRead])
+# async def list_products(
+#     service: ProductServiceDep, params: PageParams = Depends()
+# ) -> PaginatedResponse[ProductRead]:
+#     products, total = await service.list_products(
+#         offset=params.offset, limit=params.page_size
+#     )
+#     return PaginatedResponse(
+#         items=[ProductRead.model_validate(p) for p in products],
+#         total=total,
+#         page=params.page,
+#         page_size=params.page_size,
+#     )
+
 @product_router.get("", response_model=PaginatedResponse[ProductRead])
 async def list_products(
-    service: ProductServiceDep, params: PageParams = Depends()
+    service: ProductServiceDep, params: ProductQueryParams = Depends()
 ) -> PaginatedResponse[ProductRead]:
     products, total = await service.list_products(
-        offset=params.offset, limit=params.page_size
+        offset=params.offset,
+        limit=params.page_size,
+        category_id=params.category_id,
+        search=params.search,
+        min_price=params.min_price,
+        max_price=params.max_price,
+        sort=params.sort,
     )
     return PaginatedResponse(
         items=[ProductRead.model_validate(p) for p in products],
