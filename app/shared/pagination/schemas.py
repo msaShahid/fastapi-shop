@@ -16,6 +16,13 @@ class PageParams(BaseModel):
         return (self.page - 1) * self.page_size
 
 
+class ProductQueryParams(PageParams):
+    category_id: int | None = Query(default=None)
+    search: str | None = Query(default=None, max_length=100)
+    min_price: int | None = Query(default=None, ge=0)
+    max_price: int | None = Query(default=None, ge=0)
+    sort: str = Query(default="-created_at", pattern="^-?(created_at|price_cents|name)$")
+
 class PaginatedResponse(BaseModel, Generic[T]):
 
     items: list[T]
