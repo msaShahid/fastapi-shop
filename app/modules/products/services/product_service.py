@@ -12,7 +12,9 @@ from app.shared.utils.slugify import slugify
 
 class ProductService:
 
-    def __init__(self, repository: ProductRepository, category_repository: CategoryRepository) -> None:
+    def __init__(
+        self, repository: ProductRepository, category_repository: CategoryRepository
+    ) -> None:
         self.repository = repository
         self.category_repository = category_repository
 
@@ -65,8 +67,29 @@ class ProductService:
             raise ProductNotFoundError(product_id)
         return product
 
-    async def list_products(self, *, offset: int, limit: int) -> tuple[list[Product], int]:
-        return await self.repository.list_paginated(offset=offset, limit=limit)
+    # async def list_products(self, *, offset: int, limit: int) -> tuple[list[Product], int]:
+    #     return await self.repository.list_paginated(offset=offset, limit=limit)
+
+    async def list_products(
+        self,
+        *,
+        offset: int,
+        limit: int,
+        category_id: int | None = None,
+        search: str | None = None,
+        min_price: int | None = None,
+        max_price: int | None = None,
+        sort: str = "-created_at",
+    ) -> tuple[list[Product], int]:
+        return await self.repository.list_paginated(
+            offset=offset,
+            limit=limit,
+            category_id=category_id,
+            search=search,
+            min_price=min_price,
+            max_price=max_price,
+            sort=sort,
+        )
 
     async def update_product(
         self,
