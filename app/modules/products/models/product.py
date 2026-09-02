@@ -20,7 +20,7 @@ class Product(Base, TimestampMixin):
     slug: Mapped[str] = mapped_column(String(220), unique=True, index=True)
     description: Mapped[str | None] = mapped_column(Text, default=None)
 
-    price_cents: Mapped[int] = mapped_column(Integer)
+    price_cents: Mapped[int] = mapped_column(Integer, index=True)
 
     sku: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     stock: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
