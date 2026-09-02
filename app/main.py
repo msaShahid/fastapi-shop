@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from app.core.exception_handlers import register_exception_handlers
 from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,12 +21,13 @@ app = FastAPI(
     description="A learning project: production-style e-commerce backend.",
 )
 
+register_exception_handlers(app)
+
 app.include_router(playground_router, prefix=settings.api_v1_prefix)
 app.include_router(auth_router, prefix=settings.api_v1_prefix)
 app.include_router(users_router, prefix=settings.api_v1_prefix)
 app.include_router(category_router, prefix=settings.api_v1_prefix)
 app.include_router(product_router, prefix=settings.api_v1_prefix)
-
 
 
 @app.get("/health", tags=["health"])
