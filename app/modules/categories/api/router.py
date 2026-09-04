@@ -1,73 +1,64 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 
 from app.modules.auth.dependencies.auth import AdminUser
 from app.modules.categories.dependencies.category_deps import CategoryServiceDep
+from app.modules.categories.models.category import Category
 from app.modules.categories.schemas.category import (
     CategoryCreate,
     CategoryRead,
     CategoryUpdate,
 )
+from app.modules.categories.services.category_service import CategoryService
 from app.shared.pagination.schemas import PageParams, PaginatedResponse
 
 category_router = APIRouter(prefix="/categories", tags=["categories"])
 
 
+def _to_category_read(category: Category, service: CategoryService) -> CategoryRead:
+
+    base = CategoryRead.model_validate(category)
+    image_url = (
+        service.storage.get_url(path=category.image_path)
+        if category.image_path
+        else None
+    )
+    return base.model_copy(update={"image_url": image_url})
+
+
 @category_router.post(
-    "",
-    response_model=CategoryRead,
-    status_code=status.HTTP_201_CREATED,
+    "", response_model=CategoryRead, status_code=status.HTTP_201_CREATED
 )
 async def create_category(
-    payload: CategoryCreate,
-    service: CategoryServiceDep,
-    _admin: AdminUser,
+    payload: CategoryCreate, service: CategoryServiceDep, _admin: AdminUser
 ) -> CategoryRead:
     category = await service.create_category(
-        name=payload.name,
-        description=payload.description,
+        name=payload.name, description=payload.description
     )
+    return _to_category_read(category, service)
 
-    return CategoryRead.model_validate(category)
 
-
-@category_router.get(
-    "",
-    response_model=PaginatedResponse[CategoryRead],
-)
+@category_router.get("", response_model=PaginatedResponse[CategoryRead])
 async def list_categories(
-    service: CategoryServiceDep,
-    params: PageParams = Depends(),
+    service: CategoryServiceDep, params: PageParams = Depends()
 ) -> PaginatedResponse[CategoryRead]:
     categories, total = await service.list_categories(
-        offset=params.offset,
-        limit=params.page_size,
+        offset=params.offset, limit=params.page_size
     )
-
     return PaginatedResponse(
-        items=[CategoryRead.model_validate(c) for c in categories],
+        items=[_to_category_read(c, service) for c in categories],
         total=total,
         page=params.page,
         page_size=params.page_size,
     )
 
 
-@category_router.get(
-    "/{category_id}",
-    response_model=CategoryRead,
-)
-async def get_category(
-    category_id: int,
-    service: CategoryServiceDep,
-) -> CategoryRead:
+@category_router.get("/{category_id}", response_model=CategoryRead)
+async def get_category(category_id: int, service: CategoryServiceDep) -> CategoryRead:
     category = await service.get_category(category_id)
+    return _to_category_read(category, service)
 
-    return CategoryRead.model_validate(category)
 
-
-@category_router.patch(
-    "/{category_id}",
-    response_model=CategoryRead,
-)
+@category_router.patch("/{category_id}", response_model=CategoryRead)
 async def update_category(
     category_id: int,
     payload: CategoryUpdate,
@@ -80,17 +71,30 @@ async def update_category(
         description=payload.description,
         is_active=payload.is_active,
     )
+    return _to_category_read(category, service)
 
-    return CategoryRead.model_validate(category)
 
-
-@category_router.delete(
-    "/{category_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
+@category_router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def deactivate_category(
+    category_id: int, service: CategoryServiceDep, _admin: AdminUser
+) -> None:
+    await service.deactivate_category(category_id)
+
+
+@category_router.post("/{category_id}/image", response_model=CategoryRead)
+async def upload_category_image(
     category_id: int,
     service: CategoryServiceDep,
     _admin: AdminUser,
-) -> None:
-    await service.deactivate_category(category_id)
+    image: UploadFile = File(...),
+) -> CategoryRead:
+    category = await service.upload_category_image(category_id=category_id, image=image)
+    return _to_category_read(category, service)
+
+
+@category_router.delete("/{category_id}/image", response_model=CategoryRead)
+async def delete_category_image(
+    category_id: int, service: CategoryServiceDep, _admin: AdminUser
+) -> CategoryRead:
+    category = await service.delete_category_image(category_id=category_id)
+    return _to_category_read(category, service)
