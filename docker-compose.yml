@@ -14,6 +14,7 @@ services:
       - ./alembic:/code/alembic
       - ./alembic.ini:/code/alembic.ini
       - ./scripts:/code/scripts
+      - ./media:/code/media
     depends_on:
       db:
         condition: service_healthy
