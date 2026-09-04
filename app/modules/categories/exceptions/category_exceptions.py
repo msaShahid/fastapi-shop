@@ -1,4 +1,4 @@
-from app.core.exceptions import ConflictError, NotFoundError
+from app.core.exceptions import ConflictError, InvalidStateError, NotFoundError
 
 
 class CategoryNotFoundError(NotFoundError):
@@ -9,3 +9,9 @@ class CategoryNotFoundError(NotFoundError):
 class CategoryNameAlreadyExistsError(ConflictError):
     def __init__(self) -> None:
         super().__init__("A category with this name already exists")
+
+
+class InvalidImageError(InvalidStateError):
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
