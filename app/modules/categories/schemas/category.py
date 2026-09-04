@@ -20,6 +20,7 @@ class CategoryRead(BaseModel):
     name: str
     slug: str
     description: str | None
+    image_path: str | None
     is_active: bool
     created_at: datetime
 
