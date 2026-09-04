@@ -1,12 +1,13 @@
 from typing import Annotated
 
-from app.core.exception_handlers import register_exception_handlers
 from fastapi import Depends, FastAPI
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.exception_handlers import register_exception_handlers
 from app.modules.auth.api.router import auth_router
 from app.modules.categories.api.router import category_router
 from app.modules.playground.api.router import playground_router
@@ -20,6 +21,8 @@ app = FastAPI(
     version="0.1.0",
     description="A learning project: production-style e-commerce backend.",
 )
+
+app.mount("/media", StaticFiles(directory="media"), name="media")
 
 register_exception_handlers(app)
 
