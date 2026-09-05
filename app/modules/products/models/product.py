@@ -19,7 +19,7 @@ class Product(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(200), index=True)
     slug: Mapped[str] = mapped_column(String(220), unique=True, index=True)
     description: Mapped[str | None] = mapped_column(Text, default=None)
-
+    image_path: Mapped[str | None] = mapped_column(String(255), default=None)
     price_cents: Mapped[int] = mapped_column(Integer, index=True)
 
     sku: Mapped[str] = mapped_column(String(64), unique=True, index=True)
