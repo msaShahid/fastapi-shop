@@ -6,12 +6,10 @@ from app.core.storage.interface import StorageService
 from app.modules.categories.exceptions.category_exceptions import (
     CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
-    InvalidImageError,
 )
 from app.modules.categories.models.category import Category
-from app.modules.categories.repositories.category_repository import (
-    CategoryRepository,
-)
+from app.modules.categories.repositories.category_repository import CategoryRepository
+from app.shared.utils.image_validation import get_image_extension, validate_image
 from app.shared.utils.slugify import slugify
 
 
@@ -35,44 +33,26 @@ class CategoryService:
 
         return candidate
 
-    async def create_category(
-        self,
-        *,
-        name: str,
-        description: str | None,
-    ) -> Category:
+    async def create_category(self, *, name: str, description: str | None) -> Category:
         if await self.repository.get_by_name(name) is not None:
             raise CategoryNameAlreadyExistsError(name)
 
         slug = await self._unique_slug_for(name)
 
         return await self.repository.create(
-            name=name,
-            slug=slug,
-            description=description,
+            name=name, slug=slug, description=description
         )
 
-    async def get_category(
-        self,
-        category_id: int,
-    ) -> Category:
+    async def get_category(self, category_id: int) -> Category:
         category = await self.repository.get_by_id(category_id)
-
         if category is None:
             raise CategoryNotFoundError(category_id)
-
         return category
 
     async def list_categories(
-        self,
-        *,
-        offset: int,
-        limit: int,
+        self, *, offset: int, limit: int
     ) -> tuple[list[Category], int]:
-        return await self.repository.list_paginated(
-            offset=offset,
-            limit=limit,
-        )
+        return await self.repository.list_paginated(offset=offset, limit=limit)
 
     async def update_category(
         self,
@@ -82,9 +62,7 @@ class CategoryService:
         description: str | None,
         is_active: bool | None,
     ) -> Category:
-
         category = await self.repository.get_by_id(category_id)
-
         if category is None:
             raise CategoryNotFoundError(category_id)
 
@@ -93,7 +71,6 @@ class CategoryService:
         if name is not None and name != category.name:
             if await self.repository.get_by_name(name) is not None:
                 raise CategoryNameAlreadyExistsError(name)
-
             updates["name"] = name
             updates["slug"] = await self._unique_slug_for(name)
 
@@ -103,40 +80,25 @@ class CategoryService:
         if is_active is not None:
             updates["is_active"] = is_active
 
-        return await self.repository.update(
-            category,
-            **updates,
-        )
+        return await self.repository.update(category, **updates)
 
-    async def deactivate_category(
-        self,
-        category_id: int,
-    ) -> Category:
-
+    async def deactivate_category(self, category_id: int) -> Category:
         category = await self.repository.get_by_id(category_id)
-
         if category is None:
             raise CategoryNotFoundError(category_id)
-
         return await self.repository.deactivate(category)
 
     async def upload_category_image(
-        self,
-        *,
-        category_id: int,
-        image: UploadFile,
+        self, *, category_id: int, image: UploadFile
     ) -> Category:
-
         category = await self.repository.get_by_id(category_id)
-
         if category is None:
             raise CategoryNotFoundError(category_id)
 
-        self._validate_image(image)
+        validate_image(image)
+        extension = get_image_extension(image.filename)
 
-        extension = self._get_extension(image.filename)
-
-        path = f"categories/" f"{category.id}/" f"{uuid4()}.{extension}"
+        path = f"categories/{category.id}/{uuid4()}.{extension}"
 
         old_image_path = category.image_path
 
@@ -147,65 +109,26 @@ class CategoryService:
         )
 
         try:
-            category = await self.repository.update(
-                category,
-                image_path=path,
-            )
+            category = await self.repository.update(category, image_path=path)
         except Exception:
-            # Database update failed, so remove the newly uploaded file.
             await self.storage.delete(path=path)
             raise
 
-        # Delete the previous image only after DB update succeeds.
         if old_image_path:
-            await self.storage.delete(
-                path=old_image_path,
-            )
+            await self.storage.delete(path=old_image_path)
 
         return category
 
-    async def delete_category_image(
-        self,
-        *,
-        category_id: int,
-    ) -> Category:
-
+    async def delete_category_image(self, *, category_id: int) -> Category:
         category = await self.repository.get_by_id(category_id)
-
         if category is None:
             raise CategoryNotFoundError(category_id)
 
         old_image_path = category.image_path
-
         if old_image_path is None:
             return category
 
-        category = await self.repository.update(
-            category,
-            image_path=None,
-        )
-
-        await self.storage.delete(
-            path=old_image_path,
-        )
+        category = await self.repository.update(category, image_path=None)
+        await self.storage.delete(path=old_image_path)
 
         return category
-
-    @staticmethod
-    def _validate_image(image: UploadFile) -> None:
-        allowed_types = {"image/jpeg", "image/png", "image/webp"}
-        if image.content_type not in allowed_types:
-            raise InvalidImageError("Only JPEG, PNG and WebP images are allowed.")
-
-    @staticmethod
-    def _get_extension(filename: str | None) -> str:
-        if not filename or "." not in filename:
-            raise InvalidImageError("Image must have a valid file extension.")
-
-        extension = filename.rsplit(".", 1)[-1].lower()
-        allowed_extensions = {"jpg", "jpeg", "png", "webp"}
-
-        if extension not in allowed_extensions:
-            raise InvalidImageError("Unsupported image extension.")
-
-        return "jpg" if extension == "jpeg" else extension
