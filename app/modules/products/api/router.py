@@ -1,26 +1,31 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 
 from app.modules.auth.dependencies.auth import AdminUser
 from app.modules.products.dependencies.product_deps import ProductServiceDep
+from app.modules.products.models.product import Product
 from app.modules.products.schemas.product import (
     ProductCreate,
+    ProductQueryParams,
     ProductRead,
     ProductUpdate,
 )
-from app.shared.pagination.schemas import PaginatedResponse, ProductQueryParams
+from app.modules.products.services.product_service import ProductService
+from app.shared.pagination.schemas import PaginatedResponse
 
 product_router = APIRouter(prefix="/products", tags=["products"])
 
 
-@product_router.post(
-    "",
-    response_model=ProductRead,
-    status_code=status.HTTP_201_CREATED,
-)
+def _to_product_read(product: Product, service: ProductService) -> ProductRead:
+    base = ProductRead.model_validate(product)
+    image_url = (
+        service.storage.get_url(path=product.image_path) if product.image_path else None
+    )
+    return base.model_copy(update={"image_url": image_url})
+
+
+@product_router.post("", response_model=ProductRead, status_code=status.HTTP_201_CREATED)
 async def create_product(
-    payload: ProductCreate,
-    service: ProductServiceDep,
-    _admin: AdminUser,
+    payload: ProductCreate, service: ProductServiceDep, _admin: AdminUser
 ) -> ProductRead:
     product = await service.create_product(
         name=payload.name,
@@ -31,17 +36,12 @@ async def create_product(
         category_id=payload.category_id,
         status=payload.status,
     )
+    return _to_product_read(product, service)
 
-    return ProductRead.model_validate(product)
 
-
-@product_router.get(
-    "",
-    response_model=PaginatedResponse[ProductRead],
-)
+@product_router.get("", response_model=PaginatedResponse[ProductRead])
 async def list_products(
-    service: ProductServiceDep,
-    params: ProductQueryParams = Depends(),
+    service: ProductServiceDep, params: ProductQueryParams = Depends()
 ) -> PaginatedResponse[ProductRead]:
     products, total = await service.list_products(
         offset=params.offset,
@@ -52,32 +52,21 @@ async def list_products(
         max_price=params.max_price,
         sort=params.sort,
     )
-
     return PaginatedResponse(
-        items=[ProductRead.model_validate(p) for p in products],
+        items=[_to_product_read(p, service) for p in products],
         total=total,
         page=params.page,
         page_size=params.page_size,
     )
 
 
-@product_router.get(
-    "/{product_id}",
-    response_model=ProductRead,
-)
-async def get_product(
-    product_id: int,
-    service: ProductServiceDep,
-) -> ProductRead:
+@product_router.get("/{product_id}", response_model=ProductRead)
+async def get_product(product_id: int, service: ProductServiceDep) -> ProductRead:
     product = await service.get_product(product_id)
+    return _to_product_read(product, service)
 
-    return ProductRead.model_validate(product)
 
-
-@product_router.patch(
-    "/{product_id}",
-    response_model=ProductRead,
-)
+@product_router.patch("/{product_id}", response_model=ProductRead)
 async def update_product(
     product_id: int,
     payload: ProductUpdate,
@@ -93,17 +82,30 @@ async def update_product(
         category_id=payload.category_id,
         status=payload.status,
     )
+    return _to_product_read(product, service)
 
-    return ProductRead.model_validate(product)
 
-
-@product_router.delete(
-    "/{product_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
+@product_router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def archive_product(
+    product_id: int, service: ProductServiceDep, _admin: AdminUser
+) -> None:
+    await service.archive_product(product_id)
+
+
+@product_router.post("/{product_id}/image", response_model=ProductRead)
+async def upload_product_image(
     product_id: int,
     service: ProductServiceDep,
     _admin: AdminUser,
-) -> None:
-    await service.archive_product(product_id)
+    image: UploadFile = File(...),
+) -> ProductRead:
+    product = await service.upload_product_image(product_id=product_id, image=image)
+    return _to_product_read(product, service)
+
+
+@product_router.delete("/{product_id}/image", response_model=ProductRead)
+async def delete_product_image(
+    product_id: int, service: ProductServiceDep, _admin: AdminUser
+) -> ProductRead:
+    product = await service.delete_product_image(product_id=product_id)
+    return _to_product_read(product, service)
