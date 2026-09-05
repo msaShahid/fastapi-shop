@@ -1,3 +1,8 @@
+from uuid import uuid4
+
+from fastapi import UploadFile
+
+from app.core.storage.interface import StorageService
 from app.modules.categories.repositories.category_repository import CategoryRepository
 from app.modules.products.exceptions.product_exceptions import (
     InvalidCategoryError,
@@ -7,16 +12,21 @@ from app.modules.products.exceptions.product_exceptions import (
 from app.modules.products.models.product import Product
 from app.modules.products.repositories.product_repository import ProductRepository
 from app.shared.enums.product_status import ProductStatus
+from app.shared.utils.image_validation import get_image_extension, validate_image
 from app.shared.utils.slugify import slugify
 
 
 class ProductService:
 
     def __init__(
-        self, repository: ProductRepository, category_repository: CategoryRepository
+        self,
+        repository: ProductRepository,
+        category_repository: CategoryRepository,
+        storage: StorageService,
     ) -> None:
         self.repository = repository
         self.category_repository = category_repository
+        self.storage = storage
 
     async def _validate_category(self, category_id: int) -> None:
         category = await self.category_repository.get_by_id(category_id)
@@ -66,9 +76,6 @@ class ProductService:
         if product is None:
             raise ProductNotFoundError(product_id)
         return product
-
-    # async def list_products(self, *, offset: int, limit: int) -> tuple[list[Product], int]:
-    #     return await self.repository.list_paginated(offset=offset, limit=limit)
 
     async def list_products(
         self,
@@ -128,8 +135,53 @@ class ProductService:
         return await self.repository.update(product, **updates)
 
     async def archive_product(self, product_id: int) -> Product:
-
         product = await self.repository.get_by_id(product_id)
         if product is None:
             raise ProductNotFoundError(product_id)
         return await self.repository.update(product, status=ProductStatus.ARCHIVED)
+
+    async def upload_product_image(
+        self, *, product_id: int, image: UploadFile
+    ) -> Product:
+
+        product = await self.repository.get_by_id(product_id)
+        if product is None:
+            raise ProductNotFoundError(product_id)
+
+        validate_image(image)
+        extension = get_image_extension(image.filename)
+
+        path = f"products/{product.id}/{uuid4()}.{extension}"
+
+        old_image_path = product.image_path
+
+        await self.storage.upload(
+            file=image.file,
+            path=path,
+            content_type=image.content_type or "application/octet-stream",
+        )
+
+        try:
+            product = await self.repository.update(product, image_path=path)
+        except Exception:
+            await self.storage.delete(path=path)
+            raise
+
+        if old_image_path:
+            await self.storage.delete(path=old_image_path)
+
+        return product
+
+    async def delete_product_image(self, *, product_id: int) -> Product:
+        product = await self.repository.get_by_id(product_id)
+        if product is None:
+            raise ProductNotFoundError(product_id)
+
+        old_image_path = product.image_path
+        if old_image_path is None:
+            return product
+
+        product = await self.repository.update(product, image_path=None)
+        await self.storage.delete(path=old_image_path)
+
+        return product
