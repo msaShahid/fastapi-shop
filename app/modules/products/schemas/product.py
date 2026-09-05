@@ -1,8 +1,10 @@
 from datetime import datetime
 
+from fastapi import Query
 from pydantic import BaseModel, Field
 
 from app.shared.enums.product_status import ProductStatus
+from app.shared.pagination.schemas import PageParams
 
 
 class CategorySummary(BaseModel):
@@ -11,7 +13,8 @@ class CategorySummary(BaseModel):
     slug: str
 
     model_config = {"from_attributes": True}
-    
+
+
 class ProductCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=5000)
@@ -31,6 +34,19 @@ class ProductUpdate(BaseModel):
     status: ProductStatus | None = None
 
 
+class ProductQueryParams(PageParams):
+
+    category_id: int | None = Query(default=None)
+    search: str | None = Query(default=None, max_length=100)
+    min_price: int | None = Query(default=None, ge=0, description="Minimum price in cents")
+    max_price: int | None = Query(default=None, ge=0, description="Maximum price in cents")
+    sort: str = Query(
+        default="-created_at",
+        pattern="^-?(created_at|price_cents|name)$",
+        description="One of: created_at, -created_at, price_cents, -price_cents, name, -name",
+    )
+
+
 class ProductRead(BaseModel):
     id: int
     name: str
@@ -40,8 +56,9 @@ class ProductRead(BaseModel):
     sku: str
     stock: int
     status: ProductStatus
-    #category_id: int
     category: CategorySummary
+    image_path: str | None
+    image_url: str | None = None
     created_at: datetime
     updated_at: datetime
 
