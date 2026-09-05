@@ -41,3 +41,8 @@ class InvalidStateError(AppError):
 
     def __init__(self, message: str = "Invalid request") -> None:
         super().__init__(message)
+
+class InvalidImageError(InvalidStateError):
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
